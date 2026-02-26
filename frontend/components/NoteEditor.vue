@@ -12,40 +12,40 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
 export default {
-  props: ['note'],
-  setup(props) {
-    const categories = ref([]);
-
-    const fetchCategories = async () => {
+  data() {
+    return {
+      note: {
+        title: '',
+        content: '',
+        category_id: null
+      },
+      categories: []
+    };
+  },
+  methods: {
+    async fetchCategories() {
       try {
-        const response = await axios.get('/api/categories');
-        categories.value = response.data;
+        const response = await axios.get('/api/categories/');
+        this.categories = response.data;
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
-    };
-
-    onMounted(() => {
-      fetchCategories();
-    });
-
-    const saveNote = async () => {
+    },
+    async saveNote() {
       try {
-        await axios.put(`/api/notes/${props.note.id}`, props.note);
-        alert('Note saved successfully!');
+        await axios.post('/api/notes/', this.note);
+        alert('Note saved successfully');
       } catch (error) {
         console.error('Failed to save note:', error);
+        alert('Failed to save note');
       }
-    };
-
-    return {
-      categories,
-      saveNote
-    };
+    }
+  },
+  created() {
+    this.fetchCategories();
   }
 };
 </script>
