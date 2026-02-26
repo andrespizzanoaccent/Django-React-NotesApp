@@ -1,7 +1,7 @@
-from django.http import response
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework import status
 from .models import Note, Category
 from .serializers import NoteSerializer, CategorySerializer
 from .utils import updateNote, getNoteDetail, deleteNote, getNotesList, createNote
@@ -32,13 +32,13 @@ def getRoutes(request):
             'Endpoint': '/notes/id/update/',
             'method': 'PUT',
             'body': {'body': ""},
-            'description': 'Creates an existing note with data sent in post request'
+            'description': 'Updates an existing note with data sent in post request'
         },
         {
             'Endpoint': '/notes/id/delete/',
             'method': 'DELETE',
             'body': None,
-            'description': 'Deletes and exiting note'
+            'description': 'Deletes an existing note'
         },
         {
             'Endpoint': '/categories/',
@@ -47,16 +47,16 @@ def getRoutes(request):
             'description': 'Returns an array of categories'
         },
         {
-            'Endpoint': '/categories/create/',
-            'method': 'POST',
-            'body': {'name': "", 'metadata': {}},
-            'description': 'Creates new category with data sent in post request'
-        },
-        {
             'Endpoint': '/categories/id',
             'method': 'GET',
             'body': None,
             'description': 'Returns a single category object'
+        },
+        {
+            'Endpoint': '/categories/create/',
+            'method': 'POST',
+            'body': {'name': "", 'metadata': {}},
+            'description': 'Creates new category with data sent in post request'
         },
         {
             'Endpoint': '/categories/id/update/',
@@ -106,28 +106,25 @@ def manageCategories(request):
         serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def manageCategory(request, pk):
-    try:
-        category = Category.objects.get(id=pk)
-    except Category.DoesNotExist:
-        return Response({'error': 'Category not found'}, status=404)
+    category = get_object_or_404(Category, pk=pk)
 
     if request.method == 'GET':
         serializer = CategorySerializer(category)
         return Response(serializer.data)
 
     if request.method == 'PUT':
-        serializer = CategorySerializer(instance=category, data=request.data)
+        serializer = CategorySerializer(category, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     if request.method == 'DELETE':
         category.delete()
-        return Response({'message': 'Category deleted successfully'})
+        return Response(status=status.HTTP_204_NO_CONTENT)
