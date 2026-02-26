@@ -1,83 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import React, { useState, useEffect } from 'react'
+import { useParams, useHistory } from 'react-router-dom'
+
 
 const NotePage = () => {
-    const { id } = useParams();
-    const history = useHistory();
-    const [note, setNote] = useState({ body: '', category: null });
-    const [categories, setCategories] = useState([]);
+    let { id } = useParams()
+    let history = useHistory()
+    let [note, setNote] = useState(null)
+    let [categories, setCategories] = useState([])
 
     useEffect(() => {
-        if (id !== 'new') {
-            fetchNote();
+        getNote()
+        getCategories()
+    }, [id])
+
+    let getNote = async () => {
+        if (id === 'new') return
+
+        try {
+            let response = await fetch(`/api/notes/${id}/`)
+            if (!response.ok) throw new Error('Failed to fetch note')
+            let data = await response.json()
+            setNote(data)
+        } catch (error) {
+            console.error(error)
         }
-        fetchCategories();
-    }, [id]);
+    }
 
-    const fetchNote = async () => {
-        const response = await fetch(`/api/notes/${id}/`);
-        const data = await response.json();
-        setNote(data);
-    };
-
-    const fetchCategories = async () => {
-        const response = await fetch('/api/categories/');
-        const data = await response.json();
-        setCategories(data);
-    };
-
-    const handleSubmit = async () => {
-        if (id === 'new' && note.body) {
-            await fetch(`/api/notes/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(note),
-            });
-        } else if (id !== 'new') {
-            await fetch(`/api/notes/${id}/`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(note),
-            });
+    let getCategories = async () => {
+        try {
+            let response = await fetch('/api/categories/')
+            if (!response.ok) throw new Error('Failed to fetch categories')
+            let data = await response.json()
+            setCategories(data)
+        } catch (error) {
+            console.error(error)
         }
-        history.push('/');
-    };
+    }
 
-    const handleDelete = async () => {
-        await fetch(`/api/notes/${id}/`, {
+    let createNote = async () => {
+        fetch(`/api/notes/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(note)
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to create note')
+            history.push('/')
+        }).catch(error => console.error(error))
+    }
+
+    let updateNote = async () => {
+        fetch(`/api/notes/${id}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(note)
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to update note')
+            history.push('/')
+        }).catch(error => console.error(error))
+    }
+
+    let deleteNote = async () => {
+        fetch(`/api/notes/${id}/`, {
             method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-        history.push('/');
-    };
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to delete note')
+            history.push('/')
+        }).catch(error => console.error(error))
+    }
+
+    let handleSubmit = () => {
+        if (id !== 'new' && note.body === '') {
+            deleteNote()
+        } else if (id !== 'new') {
+            updateNote()
+        } else if (id === 'new' && note !== null) {
+            createNote()
+        }
+    }
 
     return (
         <div className="note">
-            <textarea
-                onChange={(e) => setNote({ ...note, body: e.target.value })}
-                value={note.body}
-            ></textarea>
-            <select
-                onChange={(e) => setNote({ ...note, category: e.target.value })}
-                value={note.category || ''}
-            >
-                <option value="">No Category</option>
-                {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                        {category.name}
-                    </option>
+            <div className="note-header">
+                <h3>
+                    <button onClick={handleSubmit}>Save</button>
+                </h3>
+            </div>
+            <textarea onChange={(e) => { setNote({ ...note, 'body': e.target.value }) }} value={note?.body}></textarea>
+            <select onChange={(e) => { setNote({ ...note, 'category': e.target.value }) }} value={note?.category || ''}>
+                <option value="">Select Category</option>
+                {categories.map(category => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
             </select>
-            <button onClick={handleSubmit}>Save</button>
-            {id !== 'new' && <button onClick={handleDelete}>Delete</button>}
         </div>
-    );
-};
+    )
+}
 
-export default NotePage;
+export default NotePage
