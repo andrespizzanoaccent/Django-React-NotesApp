@@ -1,9 +1,10 @@
 from django.db import models
+from django.core.validators import validate_json
 
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    metadata = models.JSONField(null=True, blank=True)
+    metadata = models.JSONField(validators=[validate_json], blank=True, null=True)
 
     def __str__(self):
         return self.name
