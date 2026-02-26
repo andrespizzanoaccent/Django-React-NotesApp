@@ -1,90 +1,83 @@
-import React, { useState, useEffect } from 'react'
-import { ReactComponent as ArrowLeft } from '../assets/arrow-left.svg'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useParams, useHistory } from 'react-router-dom';
 
-const NotePage = ({ match, history }) => {
-
-    let noteId = match.params.id
-    let [note, setNote] = useState(null)
+const NotePage = () => {
+    const { id } = useParams();
+    const history = useHistory();
+    const [note, setNote] = useState({ body: '', category: null });
+    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
-        getNote()
-    }, [noteId])
-
-
-    let getNote = async () => {
-        if (noteId === 'new') return
-
-        let response = await fetch(`/api/notes/${noteId}/`)
-        let data = await response.json()
-        setNote(data)
-    }
-
-    let createNote = async () => {
-        fetch(`/api/notes/`, {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(note)
-        })
-    }
-
-
-    let updateNote = async () => {
-        fetch(`/api/notes/${noteId}/`, {
-            method: "PUT",
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(note)
-        })
-    }
-
-
-    let deleteNote = async () => {
-        fetch(`/api/notes/${noteId}/`, {
-            method: 'DELETE',
-            'headers': {
-                'Content-Type': 'application/json'
-            }
-        })
-        history.push('/')
-    }
-
-    let handleSubmit = () => {
-        console.log('NOTE:', note)
-        if (noteId !== 'new' && note.body == '') {
-            deleteNote()
-        } else if (noteId !== 'new') {
-            updateNote()
-        } else if (noteId === 'new' && note.body !== null) {
-            createNote()
+        if (id !== 'new') {
+            fetchNote();
         }
-        history.push('/')
-    }
+        fetchCategories();
+    }, [id]);
 
-    let handleChange = (value) => {
-        setNote(note => ({ ...note, 'body': value }))
-        console.log('Handle Change:', note)
-    }
+    const fetchNote = async () => {
+        const response = await fetch(`/api/notes/${id}/`);
+        const data = await response.json();
+        setNote(data);
+    };
+
+    const fetchCategories = async () => {
+        const response = await fetch('/api/categories/');
+        const data = await response.json();
+        setCategories(data);
+    };
+
+    const handleSubmit = async () => {
+        if (id === 'new' && note.body) {
+            await fetch(`/api/notes/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(note),
+            });
+        } else if (id !== 'new') {
+            await fetch(`/api/notes/${id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(note),
+            });
+        }
+        history.push('/');
+    };
+
+    const handleDelete = async () => {
+        await fetch(`/api/notes/${id}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        history.push('/');
+    };
 
     return (
-        <div className="note" >
-            <div className="note-header">
-                <h3>
-                    <ArrowLeft onClick={handleSubmit} />
-                </h3>
-                {noteId !== 'new' ? (
-                    <button onClick={deleteNote}>Delete</button>
-                ) : (
-                    <button onClick={handleSubmit}>Done</button>
-                )}
-
-            </div>
-            <textarea onChange={(e) => { handleChange(e.target.value) }} value={note?.body}></textarea>
+        <div className="note">
+            <textarea
+                onChange={(e) => setNote({ ...note, body: e.target.value })}
+                value={note.body}
+            ></textarea>
+            <select
+                onChange={(e) => setNote({ ...note, category: e.target.value })}
+                value={note.category || ''}
+            >
+                <option value="">No Category</option>
+                {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                        {category.name}
+                    </option>
+                ))}
+            </select>
+            <button onClick={handleSubmit}>Save</button>
+            {id !== 'new' && <button onClick={handleDelete}>Delete</button>}
         </div>
-    )
-}
+    );
+};
 
-export default NotePage
+export default NotePage;
