@@ -1,32 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import ListItem from '../components/ListItem';
-import AddButton from '../components/AddButton';
+import React, { useState, useEffect } from 'react'
+import ListItem from '../components/ListItem'
+import AddButton from '../components/AddButton'
+
 
 const NotesListPage = () => {
-    const [notes, setNotes] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState('');
+
+    let [notes, setNotes] = useState([])
+    let [categories, setCategories] = useState([])
+    let [selectedCategory, setSelectedCategory] = useState('')
 
     useEffect(() => {
-        getNotes();
-        getCategories();
-    }, [selectedCategory]);
+        getNotes()
+        getCategories()
+    }, [])
 
-    const getNotes = async () => {
-        let url = '/api/notes/';
-        if (selectedCategory) {
-            url += `?category=${selectedCategory}`;
+    let getNotes = async () => {
+        try {
+            let response = await fetch('/api/notes/')
+            if (!response.ok) throw new Error('Failed to fetch notes')
+            let data = await response.json()
+            setNotes(data)
+        } catch (error) {
+            console.error(error)
         }
-        const response = await fetch(url);
-        const data = await response.json();
-        setNotes(data);
-    };
+    }
 
-    const getCategories = async () => {
-        const response = await fetch('/api/categories/');
-        const data = await response.json();
-        setCategories(data);
-    };
+    let getCategories = async () => {
+        try {
+            let response = await fetch('/api/categories/')
+            if (!response.ok) throw new Error('Failed to fetch categories')
+            let data = await response.json()
+            setCategories(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    let filterNotesByCategory = (categoryId) => {
+        setSelectedCategory(categoryId)
+        if (categoryId === '') {
+            getNotes()
+        } else {
+            setNotes(notes.filter(note => note.category === categoryId))
+        }
+    }
 
     return (
         <div className="notes">
@@ -34,19 +51,16 @@ const NotesListPage = () => {
                 <h2 className="notes-title">&#9782; Notes</h2>
                 <p className="notes-count">{notes.length}</p>
             </div>
+
             <div className="category-filter">
-                <select
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    value={selectedCategory}
-                >
+                <select onChange={(e) => filterNotesByCategory(e.target.value)} value={selectedCategory}>
                     <option value="">All Categories</option>
-                    {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                            {category.name}
-                        </option>
+                    {categories.map(category => (
+                        <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                 </select>
             </div>
+
             <div className="notes-list">
                 {notes.map((note, index) => (
                     <ListItem key={index} note={note} />
@@ -54,7 +68,7 @@ const NotesListPage = () => {
             </div>
             <AddButton />
         </div>
-    );
-};
+    )
+}
 
-export default NotesListPage;
+export default NotesListPage
