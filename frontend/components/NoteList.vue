@@ -1,6 +1,6 @@
 <template>
   <div>
-    <select v-model="selectedCategory">
+    <select v-model="selectedCategory" @change="filterNotes">
       <option value="">All Categories</option>
       <option v-for="category in categories" :key="category.id" :value="category.id">
         {{ category.name }}
@@ -15,51 +15,46 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 export default {
-  setup() {
-    const notes = ref([]);
-    const categories = ref([]);
-    const selectedCategory = ref('');
-
-    const fetchNotes = async () => {
+  data() {
+    return {
+      notes: [],
+      categories: [],
+      selectedCategory: ''
+    };
+  },
+  computed: {
+    filteredNotes() {
+      if (!this.selectedCategory) return this.notes;
+      return this.notes.filter(note => note.category_id === this.selectedCategory);
+    }
+  },
+  methods: {
+    async fetchNotes() {
       try {
-        const response = await axios.get('/api/notes');
-        notes.value = response.data;
+        const response = await axios.get('/api/notes/');
+        this.notes = response.data;
       } catch (error) {
         console.error('Failed to fetch notes:', error);
       }
-    };
-
-    const fetchCategories = async () => {
+    },
+    async fetchCategories() {
       try {
-        const response = await axios.get('/api/categories');
-        categories.value = response.data;
+        const response = await axios.get('/api/categories/');
+        this.categories = response.data;
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
-    };
-
-    onMounted(() => {
-      fetchNotes();
-      fetchCategories();
-    });
-
-    const filteredNotes = computed(() => {
-      if (!selectedCategory.value) {
-        return notes.value;
-      }
-      return notes.value.filter(note => note.category_id === selectedCategory.value);
-    });
-
-    return {
-      notes,
-      categories,
-      selectedCategory,
-      filteredNotes
-    };
+    },
+    filterNotes() {
+      // This method is triggered by the change event on the category select
+    }
+  },
+  created() {
+    this.fetchNotes();
+    this.fetchCategories();
   }
 };
 </script>
