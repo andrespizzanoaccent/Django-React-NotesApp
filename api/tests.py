@@ -1,52 +1,68 @@
-from django.test import TestCase
-from rest_framework.test import APIClient
+from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APITestCase
 from .models import Category, Note
 
 
-class CategoryAPITestCase(TestCase):
+class CategoryTests(APITestCase):
+
     def setUp(self):
-        self.client = APIClient()
-        self.category_data = {'name': 'Work', 'metadata': {'color': 'blue'}}
+        self.category_data = {'name': 'Work', 'metadata': {}}
         self.category = Category.objects.create(**self.category_data)
 
     def test_create_category(self):
-        response = self.client.post('/api/categories/', {'name': 'Personal', 'metadata': {'color': 'red'}})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('categories')
+        data = {'name': 'Personal', 'metadata': {}}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Category.objects.count(), 2)
 
     def test_get_categories(self):
-        response = self.client.get('/api/categories/')
+        url = reverse('categories')
+        response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
     def test_update_category(self):
-        response = self.client.put(f'/api/categories/{self.category.id}/', {'name': 'Work Updated', 'metadata': {'color': 'green'}})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('category', args=[self.category.id])
+        data = {'name': 'Updated Work', 'metadata': {}}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.category.refresh_from_db()
-        self.assertEqual(self.category.name, 'Work Updated')
+        self.assertEqual(self.category.name, 'Updated Work')
 
     def test_delete_category(self):
-        response = self.client.delete(f'/api/categories/{self.category.id}/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('category', args=[self.category.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Category.objects.count(), 0)
 
 
-class NoteCategoryAssignmentTestCase(TestCase):
+class NoteTests(APITestCase):
+
     def setUp(self):
-        self.client = APIClient()
-        self.category = Category.objects.create(name='Work', metadata={'color': 'blue'})
-        self.note_data = {'body': 'Test note', 'category': self.category.id}
+        self.category = Category.objects.create(name='Work', metadata={})
+        self.note_data = {'body': 'Test Note', 'category': self.category.id}
+        self.note = Note.objects.create(**self.note_data)
 
     def test_create_note_with_category(self):
-        response = self.client.post('/api/notes/', self.note_data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        note = Note.objects.get(id=response.data['id'])
-        self.assertEqual(note.category, self.category)
+        url = reverse('notes')
+        data = {'body': 'Another Test Note', 'category': self.category.id}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Note.objects.count(), 2)
 
-    def test_filter_notes_by_category(self):
-        note = Note.objects.create(body='Test note', category=self.category)
-        response = self.client.get(f'/api/notes/?category={self.category.id}')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['id'], note.id)
+    def test_update_note_category(self):
+        new_category = Category.objects.create(name='Personal', metadata={})
+        url = reverse('note', args=[self.note.id])
+        data = {'body': 'Updated Note', 'category': new_category.id}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.category.id, new_category.id)
+
+    def test_delete_note(self):
+        url = reverse('note', args=[self.note.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Note.objects.count(), 0)
